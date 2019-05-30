@@ -6,14 +6,14 @@ import os
 import time
 
 
-def search_name_on_afca():
+def search_afca():
     # Set Path for selenium FireFox driver
     path = os.getcwd() + r"\geckodriver.exe"
     driver = webdriver.Firefox(executable_path=path)
 
     for member in members:  # iterate over the members list
 
-        # Load search page, fill out the 'Name' form field & then press ENTER to submit the search.
+        # Load page, fill out the 'Name' form field & then press ENTER to submit the search.
         driver.get("https://apps.afca.org.au/dapweb/idr/")
         input_element = driver.find_element_by_name("ctl00$body$txtName")
         input_element.send_keys(member)
@@ -28,28 +28,31 @@ def search_name_on_afca():
 
 
 def scrape_current_page_source(d):
-    base_html = BeautifulSoup(d.page_source, 'html.parser')  # parse page src into a bs4 object.
+    current_page_html = BeautifulSoup(d.page_source, 'html.parser')  # parse page src into a bs4 object.
 
     # scrape the 'member' class & split/strip the text to remove unnecessary information. Then append to relevant list.
-    member_numbers.append(base_html.findAll('div', {"class": "member"})[0].get_text().split(":")[1].split('\n')[0].strip())
-    member_ABNs.append(base_html.findAll('div', {"class": "member"})[0].get_text().split(":")[2].strip())
+    member_numbers.append(current_page_html.findAll('div', {"class": "member"})[0]
+                          .get_text().split(":")[1].split('\n')[0].strip())
+
+    member_ABNs.append(current_page_html.findAll('div', {"class": "member"})[0]
+                       .get_text().split(":")[2].strip())
 
 
-def load_members_from_file():  # turn excel document into dataframe and retrieve values from 'Members' column. return list
-    df = pd.read_excel('book.xlsx')
-    return df['Members'].values.tolist()
+# turn excel doc into DataFrame and retrieve values from 'Members' column. return list
+def load_column_data_from_spreadsheet(path, column):
+    return pd.read_excel(path)[column].values.tolist()
 
 
 if __name__ == '__main__':
     # initialize lists which will contain all needed data & then used as columns in pandas.
-    members = load_members_from_file()
+    members = load_column_data_from_spreadsheet('book.xlsx', 'Members')  # path / column name
     member_numbers = []
     member_ABNs = []
 
-    # retrieve all information.
-    search_name_on_afca()
+    # retrieve information.
+    search_afca()
 
-    # create pandas dataframe using lists & export to csv.
+    # create pandas DataFrame using lists & export to csv.
     df = pd.DataFrame({'Member': members, 'Member Number': member_numbers, 'Member ACN/ABN': member_ABNs})
     df.to_csv('afca.csv', encoding='utf-8')
 
